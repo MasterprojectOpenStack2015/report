@@ -1,0 +1,13 @@
+*.aux
+*.ist
+*.log
+*.out
+*.toc
+*.tcp
+*.tps
+*.bbl
+*.blg
+*.glg
+*.gls
+*.synctex
+*.synctex.gz

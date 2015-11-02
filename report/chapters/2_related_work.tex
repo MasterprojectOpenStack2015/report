@@ -1,0 +1,31 @@
+\section[Related Work \texorpdfstring{{\textbf{\tiny \enspace (JE, SK, NK)}}}{}]{Related Work}
+\sectionmark{Related Work}
+\label{related}
+In this chapter we will introduce work related to our masters project. In a first part we will describe work related to OpenStack and its possibilities of installation. The second part will cover the related work to dependability in OpenStack.
+
+\subsection{OpenStack Installation}
+In order to analyze the dependability of OpenStack, it is necessary to install an OpenStack instance. Due to the fact that such an analysis might require a clean and fresh OpenStack installation after each test run, a quick installation is of advantage. Further, independence of underlying hardware is vital to reproduce results. Merging the requirements of an easy and quick installation that achieve reproducible results leads us to look for possibilities to automatically install OpenStack completely in a virtual environment. There are various OpenStack derivatives both commercially and freely available.\\
+
+\emph{HP Helion}\footnote{\url{http://www8.hp.com/us/en/cloud/hphelion-openstack.html}} is available both as a commercial-grade edition and a free-to-license community edition. The latter is available on promotional USB drives given out by HP. The HP Helion community edition installation is made to provide an easy installation routine with little need for configuration by means of such an USB drive. Further, it is possible to install HP Helion as an all-in-one system on virtual machines in addition to deploying it on bare-metal. \\
+
+\emph{DevStack}\footnote{\url{http://docs.openstack.org/developer/devstack/}} is another possibility for an easy OpenStack installation. It is a development environment for OpenStack. Being designed for development on OpenStack, it is mainly used for an one-node installation of OpenStack. Additionally, DevStack also offers an option for a multi-node setup.\\
+
+A manual installation of an OpenStack instance can take very long and be quite cumbersome, depending on the setup one is aiming to achieve. It is therefore of great advantage to automate the installation. As an OpenStack installation is distributed among a number of nodes, using an orchestration tool like Ansible\footnote{\url{http://www.ansible.com/}} is advisable. Ansible manages nodes using SSH and Python. \\
+
+\emph{openstack-ansible}\footnote{\url{https://github.com/openstack-ansible/openstack-ansible}} is an existing automated OpenStack installation project, which installs OpenStack on Vagrant virtual machines. We ran the installation script of this project, however encountered some bugs. In order to understand the underlying mechanisms of OpenStack ourselves, we decided to follow a similar approach to openstack-ansible based on KVM virtual machines.\\
+
+We will give further results of our experiences with these technologies and products in Chapter~\ref{installpossibilities}.
+
+\subsection{Evaluating OpenStack Dependability}
+
+Due to the complexity and variety of possibilities to set up an OpenStack system, evaluating the dependability of OpenStack in general is no easy task. For this reason, we have decided to make simplifying assumptions about an OpenStack installation and define a test environment on which we can then run dependability experiments. An more general approach is also possible, i.e. building a framework for injecting faults into various OpenStack deployments, as was done for example by \cite{kollarova} or \cite{Ju:2013:FRO:2523616.2523622}. Both works thereby created a frameworks for injecting faults into OpenStack. \cite{kollarova} follows a similar approach to that of our masters project and uses a virtual environment for the setup of OpenStack, however only implements one simulated failure as proof of concept. \cite{Ju:2013:FRO:2523616.2523622} on the other hand focuses more on the fault injection aspect, especially targeting service communications, uncovering 23 bugs in two OpenStack versions. In our masters project, we aim to provide a framework for the evaluation of the cloud system OpenStack with the advantage of a fast and easy virtual installation of the system itself and easily extendable experiments for dependability testing.\\
+
+The previous masters project on OpenStack also gave some insights on fault tolerance of OpenStack in \cite{mp14}, presenting a fault tree based on the high availability setup presented by \cite{teng}.
+
+
+
+
+
+
+
+

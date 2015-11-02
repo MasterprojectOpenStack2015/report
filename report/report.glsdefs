@@ -1,0 +1,30 @@
+\ifglsentryexists{Horizon}{}%
+{%
+\gls@defglossaryentry{Horizon}%
+{%
+name={},%
+sort={},%
+type={main},%
+first={horizon},%
+firstplural={horizons},%
+text={horizon},%
+plural={horizons},%
+description={The OpenStack Web UI},%
+descriptionplural={The OpenStack Web UI},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+}%

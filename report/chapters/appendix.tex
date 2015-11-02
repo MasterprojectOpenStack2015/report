@@ -1,0 +1,201 @@
+\begin{appendix}
+\section{Code Documentation}
+\label{appendix}
+In this appendix we will document the technical aspects of the framework we created for the installation and evaluation of the OpenStack system.
+
+
+
+\subsection{Folder Structure}
+\begin{itemize}
+	\item \verb|/|: This folder contains the most important scripts.  
+	\item \verb|installation|: This folder contains various bash scripts that prepare the host machine as well as create and prepare the virtual machines for the OpenStack installation. The file \verb|install.sh| is the main file which is executed for starting the complete installation of the system. Snapshots of the current environment status can be taken with
+\begin{verbatim}
+snapshot_virtual_machines.sh <snapshot_name> 
+\end{verbatim}
+with \verb|<snapshot_name>| being the parameter for the name of the snapshot to be created. The snapshotting mechanism will shut down all virtual machines, snapshot the virtual hard drives of all nodes, and bring back up all machines. To revert to a specific snapshot, the script \verb|snapshot_revert.sh| can be used. It will list all available snapshots, and revert all virtual machines back to the selected snapshot. Like taking the snapshot, reverting will also restart the virtual machines.
+	
+	\begin{itemize}
+		\item \verb|installation/config|: This folder contains all files needed for configuration of the OpenStack installation. The file \verb|installation_configuration.sh| will allow for changing default passwords, URLs, IP addresses etc. The folder
+\verb|ansible| contains the Ansible configuration file and the hosts file, which defines the hosts (i.e. which IP address maps to which type of node) and needs to be customized when adding/removing nodes. The \verb|network| folder contains the .xml files that specify the three virtual networks created by libvirt. A folder called \verb|vm| contains for each virtual machine that is to be created a folder with the name of that VM. In the VM folder itself reside four files: \verb|creation.xml| defines the hardware of the respective VM to be created by libvirt. \verb|etc_network_interfaces| contains the \textbf{/etc/network/interfaces} file of the respective VM.
+	\end{itemize}
+	
+	\begin{itemize}
+		\item \verb|installation/playbooks|: This folder contains all the playbooks that set up OpenStack on the virtual nodes. The containing folder structure is based on the available documentation of OpenStack Kilo\footnote{\url{http://docs.openstack.org/kilo/install-guide/install/apt/content/}}, which is also contained as 
+\begin{verbatim}
+openstack-install-guide-apt-kilo.pdf
+\end{verbatim}		
+		in the top hierarchy of the folder structure.
+	\end{itemize}
+	
+	\begin{itemize}
+		\item \verb|installation/tools|: this folder contains further bash scripts that provide various general reusable functionalities for the installation of OpenStack.
+	\end{itemize}
+\end{itemize}
+
+
+
+
+\subsection{Creation of Virtual Machines}
+To create the virtual machines, several steps have to be completed, which will be described here. A failure in one step results in the following steps to be aborted, as to prevent faulty installations.
+
+
+\subsubsection{Installation of tools}
+\texttt{install\_tools.sh} installs packages and tools that are required for the bash scripts or the user, such as the virtual machine manager or Python's jinja2\footnote{\url{http://jinja.pocoo.org/docs/dev/}} library, which is used by Ansible and other scripts to instantiate templates.\\
+
+\texttt{install\_ansible.sh} installs Ansible, which is used in later steps to install the OpenStack components on the virtual machines.\\
+
+\texttt{install\_lib\_virt.sh} installs libvirt which is used to manage the virtual machines. Libvirt is installed in the correct order along with qemu-kvm.
+
+
+\subsubsection{SSH Keys}
+\label{ssh-keys}
+Ansible requires SSH to be used to connect to the virtual machines. We chose to use public/private key authentication. This allows for an easy log-in on the virtual machine without requiring a password for each machine. \texttt{create\_ssh\_keys.sh} creates the SSH keys on the host system. These keys are added as trusted keys to the virtual machines. Thus, a log-in with \texttt{ssh ubuntu@controller} enters the shell on the controller host without any further authentication.
+
+\subsubsection{Networks}
+The virtual machines are connected by several networks. The network configuration is defined in the \texttt{config/network} folder as libvirt XML files. \texttt{create\_virtual\_networks.sh} creates the virtual networks using libvirt.
+
+
+\subsubsection{VM Images}
+\texttt{create\_virtual\_machine\_image.sh} creates the images for the virtual machines. As configured in the \texttt{installation\_configuration.sh} an Ubuntu cloud image is downloaded. This image serves as the basis for all future virtual machines. \\
+
+Since each virtual machine serves a certain purpose, the images need to be configured individually. \texttt{create\_virtual\_machines.sh} uses the downloaded image and adapts it. The configuration for each vm is listed in the \texttt{configuration/vm} directory. Such a directory includes several template files:
+
+\begin{itemize}
+	\item \texttt{etc\_network\_interfaces} is the file that contains the network configuration that is then stored in \texttt{/etc/network/interfaces} on the virtual machine.
+	\item \texttt{user-data.cloud-config} defines the configuration of the virtual machine, including passwords, host-names, the trusted SSH keys from Section~\ref{ssh-keys} as well as the network interfaces file.
+	\item \texttt{creation.xml} contains the libvirt definition of the virtual machine. This includes the virtual hard-drives, the network interfaces and virtual input/output devices.
+\end{itemize}
+
+These template files are instantiated using the jinja2 syntax. The variables origin from the virtual machine configuration as well as the \texttt{installation\_configuration.sh}, in which all installation relevant parameters can be adjusted. \\
+
+After the virtual machines have been defined, they are started. \texttt{wait\_for\_virtual \_machines\_to\_start.sh} starts the virtual machines and waits for the respective SSH port to open. Once the virtual machine is started, its public SSH key is copied into the known hosts file to allow an SSH connection without prompting for verification of the key. This allows for a more fluent installation process.
+
+
+\subsubsection{Configuration of Ansible}
+The \texttt{installation\_configuration.sh} should be the first and only place to make configuration changes. Also, Ansible is used for further modification of the virtual machines. As a consequence, the configuration variable definitions need to be accessible to Ansible. \texttt{configure\_ansible\_for\_vms.sh} copies the variable definitions into the corresponding Ansible files. \\
+
+Ansible uses a hosts file which categorizes all computers that shall be reached. This template file is instantiated and copied to the \texttt{/etc/ansible} directory. \\
+
+The Ansible configuration contains the user-name that is used to log into the virtual machines via SSH. This configuration file is also copied to \texttt{/etc/ansible}. \\
+
+\texttt{installation\_configuration.sh} contains variables used by the Ansible scripts. These variables are formatted and copied into an Ansible playbook, which is located at \texttt{/etc/ ansible/roles/config/vars/main.yml}. This means whenever the role ``config'' is used in an Ansible playbook, all variables from \texttt{installation\_configuration.sh} can be used. Additionally, environment variable sets ``demo'', ``admin'' and ``token'' are specified, which can be used to authenticate against OpenStack's Keystone later on in the installation process. 
+
+
+
+
+
+\subsection{OpenStack Installation with Ansible}
+As stated before, we follow the structure of the OpenStack documentation\footnote{\url{http://docs.openstack.org/kilo/install-guide/install/apt/content/index.html}} for the Ansible\footnote{\url{https://docs.ansible.com/ansible/index.html}} playbooks. Ansible is an orchestration tool that allows for configuring and managing groups of nodes simultaneously. For example, it is possible to run commands, change files or restart services on the remote machines. Ansible comes with a variety of useful modules, that allow extremely complex tasks, such as editing .ini files\footnote{Ansible makes editing .ini files extremely complex, as it uses the python .ini file parser.}.\\
+
+Ansible playbooks are written in the YAML syntax, which basically define a list of commands. The playbooks as well as the commands in them have a name, which is displayed in the terminal when the playbook is run, making it easy to follow current progress or see where an error might have occurred. A parameter \verb|hosts| in each playbook allows for specifying on which nodes the playbook will run, as specified in a Ansible hosts file, which maps all node's IP addresses to their specific groups. The output of a running Ansible playbook is shown as follows:
+\definecolor{terminalgreen}{rgb}{0.25,0.54,0.02} 
+\definecolor{terminalorange}{rgb}{0.77,0.63,0}
+\begin{Verbatim}[commandchars=\\\{\}]
+\color{darkgray}PLAY [Basic environment > OpenStack packages > add OpenStack repository]
+
+\color{darkgray}TASK: [1. update the cache] ******************************************** 
+\color{terminalgreen}ok: [192.168.100.31]
+\color{terminalgreen}ok: [192.168.100.11]
+\color{terminalgreen}ok: [192.168.100.51]
+\color{terminalgreen}ok: [192.168.100.21]
+
+\color{darkgray}TASK: [2. install cloud keyring] ***************************************
+\color{terminalorange}changed: [192.168.100.31]
+\color{terminalorange}changed: [192.168.100.21]
+\color{terminalorange}changed: [192.168.100.51]
+\color{terminalorange}changed: [192.168.100.11]
+
+\color{darkgray}TASK: [3. add repository] **********************************************
+\color{terminalorange}changed: [192.168.100.31]
+\color{terminalorange}changed: [192.168.100.21]
+\color{terminalorange}changed: [192.168.100.11]
+\color{terminalorange}changed: [192.168.100.51]
+\end{Verbatim}
+This is the output generated by the playbook 
+\begin{verbatim}
+02_basic_environment/05_OpenStack_packages/
+                     01_enable_the_OpenStack_repository.yml
+\end{verbatim}
+which corresponds exactly to the Chapter 5 Section 1 in the OpenStack documentation\footnote{\url{http://docs.openstack.org/kilo/install-guide/install/apt/content/ch_basic_environment.html\#basics-packages}}.\\
+
+Ansible allows for using variables in the playbooks for central configuration management. 
+
+\subsection{Snapshots}
+The whole installation process takes about ten to fifteen minutes. It is not advisable to re-run this process every time an experiment starts. Therefore, snapshots can be created. Once the installation process finished, a snapshot ``initial'' is created, using \texttt{snapshot\_virtual\_machines.sh}. After each experiment, one can revert all the virtual machines to this snapshot, using ``restore\_snapshot.sh''.\\
+
+The libvirt snapshotting mechanism is not fully implemented yet. Libvirt is capable of taking two main types of snapshots: external and internal. An internal snapshot allows the changes of a virtual machine to be stored in a single qcow file. External snapshots store the snapshot itself in one file, but the changes are stored in an extra file. As of September 2015, external snapshots could be taken by libvirt, but not reverted\footnote{\url{http://wiki.libvirt.org/page/I_created_an_external_snapshot,_but_libvirt_won't_let_me_delete_or_revert_to_it}}. Thus, the OpenStack virtual machines are snapshotted internally, for which it is necessary that all virtual machine storage devices are in the qcow format.
+
+
+
+
+\subsection{Dependability Experiments}
+
+In this project we created four dependability experiments as described in Chapter~\ref{experiments}.
+
+\subsubsection{Inner Workings of the Memcache Flush Experiment}
+\label{a:memcache}
+
+This experiment has four steps. If one step fails unexpectedly the following steps are omitted to allow examination of the underlying problem. \texttt{run.sh} runs the whole experiment, setting environment variables, too. The logging level can be changed by passing \texttt{-vv} or \texttt{-vvv} to it.\\
+
+We want to create a token using OpenStack. Since we setup Ansible ssh, we can use \texttt{ssh ubuntu@controller} to connect to the controller. There, we can issue a token using \texttt{openstack token issue}. Shell scripts do not allow to change variables in other, running shell scripts. Therefore, the variable containing the token is saved to a file. This file is sourced by all scripts with updated variables. The token is created in the setup step.\\
+
+After the token is created, we want to check that we can use it. \texttt{run\_checks.sh} sends a request to \url{http://controller:5000/v3/auth/tokens} to authenticate with the token. After setup this works and a new token is created.\\
+
+Depending on the logging level of \texttt{run.sh} we are asked to review the output. \\
+
+The second phase of the experiment begins with injecting the fault. 
+Again, we can use ssh to connect to the controller and flush the memcache. This is dene on \texttt{break.sh}.
+
+After this, we run the \texttt{run\_checks.sh} again and expect different output. Injecting the fault altered the system, made the memcache forget about the tokens previously issued. Thus, no new token can be created.
+
+Since this experiment's fault is only temporary, there is no need to heal the system again. Other experiments would call a \texttt{heal.sh} to ensure proper operation of OpenStack after the experiment.
+
+\subsubsection{Output of the experiments}
+
+Each experiment has a file named \texttt{example\_output.txt}. It can be used as a reference. Here we show the output of the Memcache Flush experiment. It shows that a token can not be created using a token issued before the flush of the cache.
+
+\definecolor{terminalgreen}{rgb}{0.25,0.54,0.02} 
+\definecolor{terminalorange}{rgb}{0.77,0.22,0}
+\begin{Verbatim}[commandchars=\\\{\}]
+mpos2015-source$ ./run_experiment.sh 02_memcache_flush
++ Flush Memcache
+  * SETUP
+    - on controller, get token from Keystone (as admin)
+  * Running checks
+    - attempting to create new token using first token
+    - token
+      \color{terminalgreen}OK! Token created.
+X-Subject-Token: 36e737434cc446a7a3d9ab95e9746cb9
+  * CREATING FAULT
+    - flushing memcache on controller
+  * Running checks
+    - attempting to create new token using first token
+    - token
+      \color{terminalorange}ERROR! No token created.
+\end{Verbatim}
+
+
+\subsubsection{Creating Dependability Experiments}
+Dependability experiments can easily be created and added to the existing ones. All experiments consist of five main bash scripts, that dictate the structure of the experiments. These files need to be implemented when adding a new experiment.\\
+
+Each experiment owns a main \verb|run.sh|, which is the entry point of the experiment. In this script, first \verb|setup.sh| is called, which contains all commands for setting up the OpenStack environment for the experiment, e.g., uploading files, getting tokens etc. \verb|break.sh| then causes the necessary failure in the OpenStack system, e.g. crashing a node or service. \verb|run_checks.sh| then asserts if the OpenStack system has survived the failure, running all necessary tests to test correct operation. Lastly, \verb|heal.sh| then restores any crashed nodes and brings the system back up to a running state (e.g., by reverting a snapshot if necessary), ready for the next experiment.
+
+
+
+
+\subsection{Workarounds for Bugs}
+We will describe some workarounds we used for some common issues we encountered to clear up any confusion that might arise else wise.
+\begin{itemize}
+	\item Module \verb|ini_file|: Due to the fact that Ansible is still under active development, some modules do not work as expected. The module \verb|ini_file| is used for editing .ini files. It contains a bug for .ini files containing a \verb|DEFAULT| section. We used a workaround to achieve correct editing of .ini files with a \verb|DEFAULT| section: at the beginning of the editing process, the section is renamed to \verb|DEFAULT_WORKAROUND|, then changes are applied, then the section is named back to \verb|DEFAULT|. This will result in correct .ini files.
+	
+	\item Segmentation fault: If a segmentation fault error is thrown during the installation process, this can usually be fixed by assigning the respective VM more RAM.
+\end{itemize}
+
+
+
+
+
+
+
+
+\end{appendix}

@@ -1,0 +1,185 @@
+% encoding utf8
+% loot at the auml: ä
+
+\documentclass[11pt, a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{makeidx} %Zur automatischen Indexerstellung
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{epsfig}   % Zum Einbinden von Bildern
+\usepackage{url}      % Korrekter Satz von URLs    
+\usepackage[table,dvipsnames]{xcolor}    % Verwendung von Farben
+\usepackage{colortbl}
+\usepackage{footnote}
+\usepackage{listings} % Korrekter Satz von Listings und Quellcode
+\usepackage{fancyvrb}
+\usepackage{color}
+%\usepackage{algpseudocode}
+%\usepackage{algorithm}
+%\usepackage{mathptmx}			% Times/Mathe \rmdefault
+%\usepackage[scaled=.90]{helvet}	% Skalierte Helvetica \sfdefault
+%\usepackage{courier}			% Courier \ttdefault
+%\usepackage{booktabs}
+%\usepackage{pgfplots}
+%\usepackage{tablefootnote}
+%\pgfplotsset{compat=1.8}
+%\usepackage{longtable}
+\usepackage{fancyhdr}
+
+
+% Zusatzpakete für mehr mathematische Symbole, Einfügen von Grafiken 
+% und bessere Bildunterschriften
+\usepackage{amsmath,amsthm,amsfonts,graphicx,caption}
+\usepackage{subcaption}
+
+\newtheorem{exmp}{Example}[section]
+
+
+% set up caption style
+\captionsetup{margin=10pt,font=small,labelfont=bf,format=hang}
+
+% avoid single lines at beginning/end of page
+\clubpenalty=10000
+\widowpenalty=10000
+\hyphenation{}
+
+% Wenn man direkt mit dem pdflatex eine PDF-Datei erzeugt, sollten diese beiden
+% Pakete eingebunden werden (Hyperlinks, bessere Bildschirmschriftarten usw.)
+% Optionen zu den farbigen Rahmen von Links in eckigen Klammern.
+\usepackage[colorlinks=false, pdfborder={0 0 0}, pdfborderstyle={/S/U/W 1}]{hyperref}
+
+\usepackage{ae,aecompl}
+
+%\usepackage[nonumberlist,toc]{glossaries}
+%\newglossary[slg1]{roman}{syi1}{syg1}{roman}
+%\makeglossaries
+
+
+% author at the side of a section etc.
+\newcommand{\sauth}[1]{\marginpar{\hspace{0.25cm}\textit{\scriptsize #1}}}
+
+
+\lstset{basicstyle=\ttfamily} % fixed-width font
+\lstset{tabsize=4}
+\lstset{backgroundcolor=\color{gray!10}} % background in a light gray
+\lstset{frame=tb} % lines above and below
+\lstset{rulecolor=\color{gray!50}} % colored in a slightly darker gray
+\lstset{keywordstyle=\bfseries} % keywords are bold
+%\lstset{emphstyle=\itshape\color{green!30!black}} % emphasize style: italic, dark green
+%\lstset{prebreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\rhookswarrow}}} % requires \usepackage{MnSymbol}
+%\lstset{postbreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\rcurvearrowse\space}}} % requires \usepackage{MnSymbol}
+\lstset{framexleftmargin=5pt}
+\lstset{xleftmargin=5pt}
+\lstset{breaklines=true, breakatwhitespace=true}
+\lstset{numberstyle=\scriptsize}
+\lstset{language=[LaTeX]TeX} % by default listings are LaTeX code
+\lstset{texcsstyle=*\lst@keywordstyle} % emphasize backslash as part of the command but keep style as defined in \lstset{keywordstyle=...}
+\lstset{moretexcs={lstset, rhookswarrow, rcurvearrowse, Righttorque, Lefttorque}} % add LaTeX commands which listings doesn't know
+\lstset{emph={prebreak, postbreak, breaklines, breakatwhitespace, numbers, numberstyle, breakindent}} % emphasize parameters of listings package
+\lstdefinestyle{smallcode}{
+  basicstyle=\scriptsize\ttfamily,
+}
+\lstdefinestyle{tinycode}{
+  basicstyle=\tiny\ttfamily,
+}
+
+\newenvironment{wide}{%
+  \begin{list}{}{%
+      \setlength{\topsep}{0pt}%
+      \addtolength{\leftmargin}{-2cm}%
+      \addtolength{\rightmargin}{-1.5cm}%
+      \setlength{\listparindent}{\parindent}%
+      \setlength{\itemindent}{\parindent}%
+      \setlength{\parsep}{\parskip}}%
+  \item[]%
+}{%
+  \end{list}%
+}
+
+\newcolumntype{G}{>{\columncolor{gray!25}}c}
+
+%Seitenformat-Definitionen
+%\topmargin0mm
+\textwidth147mm
+\textheight214mm
+\evensidemargin5mm
+\oddsidemargin5mm
+\footskip19mm
+%\parindent=0in
+
+
+\makeindex % legt das Index-File an
+
+
+
+\begin{document}
+% remove paragraph indent
+{\setlength{\parindent}{0cm}
+
+% import glossary entries:
+\input{staticLayout/glossary_entries.tex} 
+ 
+\pagenumbering{roman}
+% cover sheet
+\input{staticLayout/titlepage.tex} 
+
+
+% abstract
+%\input{staticLayout/abstract.tex}
+%\newpage
+
+
+% toc
+%\addtocontents{toc}{\protect\enlargethispage{2cm}}
+\tableofcontents 
+\newpage
+
+\pagenumbering{arabic}
+
+%header:
+\pagestyle{fancy}
+\fancyhead[L]{\thechapter}
+\setlength{\headheight}{20pt}
+
+
+% chapters:
+\input{chapters/1_introduction.tex} 
+
+%\newpage
+\input{chapters/2_related_work.tex}
+
+%\newpage
+\input{chapters/3_dependability.tex}
+
+%\newpage
+\input{chapters/4_environment.tex}
+
+%\newpage
+\input{chapters/5_installation.tex}
+
+%\newpage
+\input{chapters/6_experiments.tex}
+
+%\newpage
+\input{chapters/7_conclusion.tex}
+
+
+%\newpage
+%\printglossaries
+
+
+%% Anhänge
+%Hier kommt das Literaturverzeichnis
+\newpage
+\phantomsection
+\addcontentsline{toc}{section}{References} % Zeile für das Inhaltsverzeichnis
+\bibliographystyle{alpha}
+\bibliography{bibfile}
+
+\newpage
+\input{chapters/appendix.tex}
+}
+\end{document}

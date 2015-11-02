@@ -1,0 +1,56 @@
+\section[Automated Installation of OpenStack \texorpdfstring{{\textbf{\tiny \enspace (SK, NK)}}}{}]{Automated Installation of OpenStack}
+\sectionmark{Automated Installation of OpenStack}
+\label{installing}
+
+In this chapter, we describe the automated installation process of OpenStack on our virtual environment. We give an introduction to the usage and a conceptual overview, however the the more technical aspects of the system are documented in higher detail in Appendix~\ref{appendix}.
+
+\subsection{How to Install OpenStack using our System}
+The installation scripts are developed and tested on a Ubunutu 14.04 LTE (Trusty Tahr) desktop version. All required dependencies (e.g., Ansible, libvirt, etc.) are installed automatically, thus an internet connection is required. The complete installation can be started by running the script \verb|install.sh|. It installs OpenStack virtually creating the architecture described in Capter~\ref{environment}. The virtual machines are automatically created. They can be managed using the virtual machine manager, which is also installed during the installation. After the successful installation (which will take ten to fifteen minutes) OpenStack Horizon can be reached at \url{http://controller/horizon/}. Default log-in credentials are demo/demo and admin/admin.\\
+
+After the successful installation, a snapshot named ``initial'' is created. This allows for thorough dependability testing without re-installing the whole system after each experiment. Snapshots can be created manually as well: using the script 
+\begin{verbatim}
+snapshot_virtual_machines.sh <snapshot_name> 
+\end{verbatim}
+with \verb|<snapshot_name>| being the parameter for the name of the snapshot to be created. The snapshotting mechanism will shut down all virtual machines, snapshot the virtual hard drives of all nodes, and bring back up all machines.\\
+
+To revert to a specific snapshot, the script \verb|restore_snapshot.sh| can be used. It will list all available snapshots, and revert all virtual machines back to the selected snapshot. Like taking the snapshot, reverting will also require the restart of the virtual machines.
+
+\subsection{Creating the Virtual Environment}
+\label{subsec:createve}
+The virtual environment, i.e., the virtual networks and the virtual machines, are defined in the \verb|config| folder as libvirt network and libvirt domain XML-files. These XML-files define for example the IP addresses of the networks or the hardware specifications (size of RAM, number of cores, virtual hard drives, network interfaces) of the virtual machines. The virtual machines are then created with an Ubuntu cloud image\footnote{\url{https://cloud-images.ubuntu.com/trusty/}}, which are pre-configured images customized especially for running on cloud platforms. \\
+
+The initialization of the virtual machines is done using cloud-init\footnote{\url{https://cloudinit.readthedocs.org/}}, which allows for setting passwords and SSH keys for easily connecting to the them afterwards, which is also a prerequisite for utilizing Ansible in the next steps. Further, using cloud-init, the correct \verb|etc/network/interfaces| configuration files are copied to the virtual machines. \\
+
+In addition to the virtual machines for the OpenStack nodes, a further virtual machine named ``aptcache'' is created. This machine is used as a package repository by the others. The packages it delivers are not updated, meaning that the versions of all installed packages are frozen. This is important for acquiring a reproducible test environment and prevents different experiment outcomes to be caused by different package versions throughout the system.\\
+
+These virtual machines create the base of the virtual OpenStack test environment and are now ready for the actual OpenStack installation.
+
+\subsection{Installing OpenStack on Virtual Machines with Ansible}
+In order to be able to install OpenStack on the created virtual environment, Ansible must be configured in such a way that virtual machines are grouped. This allows for installing different parts of OpenStack on the different nodes. These groups are defined in a so called Ansible hosts file, which assigns the IP addresses of the different nodes to different groups. In our case, each node type is a group, i.e., ``controller'', ``network'', ``compute'' and ``object''. This allows for the so called Ansible playbooks to be executed on the specified groups of nodes in parallel. \\
+
+The Ansible playbooks that run the installation of OpenStack on the virtual nodes are strongly based on the official OpenStack installation guide\footnote{\url{http://docs.openstack.org/kilo/install-guide/install/apt/content/index.html}}, which is very extensive. This gives the advantage of not having to write any further OpenStack related documentation additionally to the documentation of the technicalities of the creation of the virtual machines and the Ansible installation. The arrangement of the Ansible playbooks in a folder structure derived from the content of the OpenStack documentation allows for easily finding the corresponding part of the documentation should one require information about a certain part of the installation.\\
+
+The Ansible installation of OpenStack starts with an initial preconfiguration of the virtual nodes. In this step, the hosts files are created in order to be able to connect to the nodes by their host names. These host names are then also added to the SSH \verb|known_hosts| files to enable the SSH connection without warning messages. Further steps include setting the locale of the virtual machines to prevent locale errors as well as deactivating the \verb|/etc/cloud/cloud.cfg| file, as all configuration of the images is done in the previous step, see Chapter~\ref{subsec:createve}.\\
+
+A special virtual machine named ``aptcache'' is set up first and independently of the others. It runs Apt-Cacher-NG\footnote{\url{https://www.unix-ag.uni-kl.de/~bloch/acng/}}, a caching proxy for Linux package repositories. All other VMs are set up to request their packages through it. This a) decreases network traffic and wait times and b) can be used to repeat the setup process while using the exact same package versions as the first time: The first install seeds the package cache, a repeated installation then can receive all packages from the cache instead of fetching potentially newer versions from upstream. To allow this, the cached data is not stored in the VM, but in a folder shared from the host machine.\\
+
+The first step of the actual OpenStack installation is installing the basic environment. This includes adding the OpenStack package repository to the nodes and installing the MySQL database on the controller and the message queue RabbitMQ on all nodes.\\
+
+The next step is the installation of the OpenStack identity service (Keystone) on the controller node. This service is responsible for the permissions of users and keeping track of the available OpenStack services with their endpoints. The installation of this service includes creating a database, installing the Keystone client packages and populating the database. A demo and an admin tenant are initially created. As with all OpenStack services, the installation is finalized by creating the service entity and the API endpoint.\\
+
+Next, the image service Glance is added on the controller node. This service allows for retrieving and registering virtual machine images. Again, a database for this service is created along with the installation of the Glance client packages and the creation of an API endpoint.\\
+
+OpenStack compute is then setup on the controller and the compute nodes. This component is responsible for the administration and hosting of the computing systems. It allows - among other things - for creating and terminating virtual machine instances through hypervisor APIs and is responsible for scheduling on which compute node an instance should run. To install the compute service Nova on the controller, the respective database and API endpoint is created and the nova service is configured. On the compute nodes, the nova-compute packages are installed and configured to run a QEMU hypervisor with the KVM extension.\\
+
+The OpenStack networking Neutron components are installed next on the network, controller and compute nodes. The main responsibility of the networking component is to provide connectivity between the instances running on the compute node. On the controller node, database and endpoint API are created, the networking server component is configured and the Modular Layer 2 plug-in is configured. This plug-in is responsible for the networking framework of the instances running on the compute nodes. On the network node, the networking components are installed and configured accordingly. The layer-3 agent for routing services, the DHCP agent, the metadata agent and the Open vSwitch service are configured. Lastly, the networking components, the Modular Layer 2 plug-in and the Open vSwitch service are configured on the compute node. The external and tenant networks are then created to finalize the installation.\\
+
+The OpenStack web interface dashboard Horizon is then installed on the controller node. This allows administrators and users to access and manage their resources on the OpenStack cloud.\\
+
+The last component that is added to OpenStack in regards to this masters project is the object storage Swift. This allows to create containers, upload and download files and management of the objects on the storage nodes. On the controller node, the proxy service that handles the requests for the storage nodes is installed and configured. The storage nodes require two empty storage devices for persisting the objects. The virtual machines for these nodes contain two virtual devices in the qcow file format. The OpenStack Swift components are then installed and configured on the object storage nodes. Following the installation, the initial account, container and object rings are created.
+
+
+
+
+
+
+

@@ -1,0 +1,6 @@
+
+# to enable this merge strategy, execute
+#   git config --global merge.ours.driver true
+# according to http://git-scm.com/book/en/v1/Customizing-Git-Git-Attributes#Merge-Strategies
+# "true" does not exist under windows, so I use "cd ."
+report.pdf merge=ours
